@@ -1,0 +1,35 @@
+{
+  "status": "RuntimeError: Failed to write 'Torque_Enable' on id_=3 with '1' after 1 tries. ",
+  "joint_order": [
+    "shoulder_pan",
+    "shoulder_lift",
+    "elbow_flex",
+    "wrist_flex",
+    "wrist_roll"
+  ],
+  "settings": {
+    "dry_run": false,
+    "durations": [
+      2,
+      2
+    ],
+    "reset_duration": 2,
+    "delta_deg": [
+      0,
+      5,
+      -10,
+      5,
+      0
+    ],
+    "period": 0.02,
+    "max_velocity": 20,
+    "max_acceleration": 40
+  },
+  "phases": [],
+  "original_elbow_p": 32,
+  "test_elbow_p": 32,
+  "cleanup_errors": [
+    "elbow_flex: Failed to write 'Torque_Enable' on id_=3 with '0' after 1 tries. "
+  ],
+  "restore_error": "Failed to write 'Lock' on id_=3 with '0' after 1 tries. "
+}

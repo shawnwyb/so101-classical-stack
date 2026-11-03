@@ -1,4 +1,0 @@
-{
-  "tracking": [],
-  "status": "RuntimeError: Pose differs from saved middle pose by over 3 degrees; reposition and restart"
-}

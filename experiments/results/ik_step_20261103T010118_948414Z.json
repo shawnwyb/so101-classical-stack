@@ -1,4 +1,0 @@
-{
-  "tracking": [],
-  "status": "ValueError: Initial angles must be finite and within URDF limits"
-}

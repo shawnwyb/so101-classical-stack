@@ -1,0 +1,11 @@
+{
+  "timestamp_utc": "2026-11-03T01:57:36.537972+00:00",
+  "joint": "elbow_flex",
+  "register": "Max_Position_Limit",
+  "old_raw": 3129,
+  "new_raw": 3130,
+  "calibration_file": "/home/shawnick/.cache/huggingface/lerobot/calibration/robots/so_follower/so101_follower.json",
+  "backup": "/home/shawnick/.cache/huggingface/lerobot/calibration/robots/so_follower/so101_follower.json.20261103T015736_431457Z.bak",
+  "hardware_motion_commanded": false,
+  "reason": "Explicit user request; not a confirmed fix for startup fault."
+}

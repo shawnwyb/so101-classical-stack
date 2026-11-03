@@ -1,0 +1,7 @@
+{
+  "operation": "Re-write Lock=0 while torque and lock already 0; no goal or enable write",
+  "comm": 0,
+  "error": 0,
+  "hex": "0x0",
+  "sdk_message": ""
+}
