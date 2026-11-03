@@ -1,0 +1,111 @@
+{
+  "mujoco_version": "3.17.0",
+  "settings": {
+    "joint_order": [
+      "shoulder_pan",
+      "shoulder_lift",
+      "elbow_flex",
+      "wrist_flex",
+      "wrist_roll",
+      "gripper"
+    ],
+    "target_angles_rad": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "kp_Nm_per_rad": [
+      8.0,
+      8.0,
+      8.0,
+      2.0,
+      0.3,
+      0.3
+    ],
+    "kd_Nm_s_per_rad": [
+      0.6993840663548849,
+      0.7224359062109466,
+      0.5248765319250404,
+      0.08929665504533475,
+      0.006977464448027853,
+      0.004400189189707645
+    ],
+    "duration_s": 5,
+    "timestep_s": 0.0005
+  },
+  "metrics": {
+    "off": {
+      "final_error_deg": {
+        "shoulder_pan": -1.3475130296627116e-05,
+        "shoulder_lift": -4.039656457831451,
+        "elbow_flex": -3.2228461072102887,
+        "wrist_flex": -3.30899630981219,
+        "wrist_roll": -0.007467104862217761,
+        "gripper": 0.6544453134897947
+      },
+      "last_second_rms_error_deg": {
+        "shoulder_pan": 1.3475130296627109e-05,
+        "shoulder_lift": 4.039656457831448,
+        "elbow_flex": 3.2228461072102847,
+        "wrist_flex": 3.3089963098121875,
+        "wrist_roll": 0.007467104862217769,
+        "gripper": 0.6544453134897943
+      },
+      "final_velocity_rad_s": {
+        "shoulder_pan": -4.38645247543753e-21,
+        "shoulder_lift": -4.685910176397587e-15,
+        "elbow_flex": -2.792506224068333e-15,
+        "wrist_flex": 1.1795321264181089e-15,
+        "wrist_roll": 2.6634581811121466e-17,
+        "gripper": -1.7239149763037235e-15
+      },
+      "final_equilibrium_residual_Nm": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "on": {
+      "final_error_deg": {
+        "shoulder_pan": 0.0,
+        "shoulder_lift": 0.0,
+        "elbow_flex": 0.0,
+        "wrist_flex": 0.0,
+        "wrist_roll": 0.0,
+        "gripper": 0.0
+      },
+      "last_second_rms_error_deg": {
+        "shoulder_pan": 0.0,
+        "shoulder_lift": 0.0,
+        "elbow_flex": 0.0,
+        "wrist_flex": 0.0,
+        "wrist_roll": 0.0,
+        "gripper": 0.0
+      },
+      "final_velocity_rad_s": {
+        "shoulder_pan": 0.0,
+        "shoulder_lift": 0.0,
+        "elbow_flex": 0.0,
+        "wrist_flex": 0.0,
+        "wrist_roll": 0.0,
+        "gripper": 0.0
+      },
+      "final_equilibrium_residual_Nm": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "prediction": "Gravity compensation reduces static error with identical PD gains.",
+  "limitations": "Ideal unlimited torques, exact model, no contacts or identified servo/gear/friction dynamics. Not hardware accuracy."
+}

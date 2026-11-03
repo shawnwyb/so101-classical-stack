@@ -24,6 +24,14 @@ python -m experiments.test_trajectory_tracking
 
 # Override the outward and reset durations independently.
 python -m experiments.test_trajectory_tracking --duration 4 --reset-duration 2
+
+# MuJoCo model inspection and a gravity/inertia sweep; no hardware connection.
+python mujoco_dynamics.py
+python mujoco_dynamics.py --viewer
+python mujoco_dynamics.py --sweep
+
+# Simulation-only PD holding comparison, with gravity compensation off/on.
+python -m experiments.simulate_gravity_compensation
 ```
 
 `results/` contains curated recorded JSON data, including representative failed runs. Relative
@@ -126,6 +134,23 @@ No movement was commanded. This changes the LeRobot elbow zero reference by
 about 0.044 degrees; historical logs retain their original calibration convention.
 The change is not a demonstrated fix for the startup fault.
 
+MuJoCo setup: installed `mujoco` 3.17.0 in the `lerobot` environment using
+`python -m pip install mujoco`. `mujoco_dynamics.py` imports the existing official
+URDF, sets mesh lookup and preserves fixed frames in memory, without editing the
+source model. It reports the full six-joint gravity vector and inertia matrix at
+zero velocity, with gripper angle zero. `--angles-deg` accepts the five arm angles.
+`--viewer` displays a static pose without time integration; its desktop window
+must be checked locally. `--sweep` varies elbow angle while keeping other joints
+fixed and writes `results/dynamics_elbow_sweep.csv` and `.svg`. Each inspection
+overwrites `results/dynamics_pose.json`.
+
+Software checks: MuJoCo tool positions agreed with our FK at two poses; M was
+symmetric positive definite; disabling model gravity yielded zero gravity bias.
+At all-zero angles, predicted shoulder-lift and elbow compensation torques were
+approximately -0.539 and -0.453 N m. These are model predictions, not measured
+servo torques. Imported URDF mass properties omit identified servo-controller,
+gear, friction, and camera/payload effects; Present_Load is not directly N m.
+
 Results cleanup: removed 21 files comprising two exact duplicate JSON records,
 uninformative/repeated startup and pose-check aborts, one superseded partial run,
 empty startup CSV/SVG exports, regenerable preview outputs, a superseded
@@ -135,3 +160,33 @@ IK seed, software IK example, hardware FK check, gain/load comparisons, 4-vs-8 s
 and 2-vs-4 s comparisons, latest two-phase execution, calibration audit, and one
 representative tracking startup failure. Regenerate the software preview with
 the command above when needed.
+
+
+Final dynamics experiment: `simulate_gravity_compensation.py` holds all six joints
+at zero using the same PD gains in two independent five-second runs. Gravity
+remains enabled in both; only the added gravity feedforward torque changes.
+P gains in joint order are [8, 8, 8, 2, 0.3, 0.3] N m/rad; D gains are computed
+as 2*sqrt(Kp*Mii) at the target. These are simulation gains, not Feetech register
+values. Gravity feedforward uses a separate zero-velocity data object at the
+current position, avoiding accidental Coriolis compensation. The controller
+applies ideal torques through qfrc_applied, then mj_step advances physics.
+
+Prediction: PD alone needs a position offset to counter gravity; adding model
+compensation reduces that offset. In
+[the recorded run](results/gravity_compensation_20261103T032817_287249Z.json),
+final target-minus-actual errors without compensation were -4.040 degrees at
+shoulder lift, -3.223 at elbow, and -3.309 at wrist flex. With compensation they
+were numerically zero. Corresponding CSV contains state and torque samples; the
+SVG plots actual angles and errors over time. Re-running creates timestamped
+files. No hardware is connected or commanded.
+
+Checks: final velocities and torque-balance residuals were below 1e-5 in their
+respective units; halving timestep from 0.5 ms to 0.25 ms reproduced the final
+uncompensated angles within 1e-6 rad. Joint limits were never reached. Contacts
+are deliberately disabled to isolate gravity; there are no actuator torque
+limits, model mismatch, or identified friction/gear/servo-controller dynamics.
+The compensated run starts exactly at rest at its target, so near-zero error is
+an ideal equilibrium demonstration, not a robustness or real-arm accuracy test.
+This supports the qualitative load-error mechanism observed on the arm; it does
+not measure Feetech torque or guarantee hardware improvement from feedforward.
+
