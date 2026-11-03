@@ -1,0 +1,35 @@
+{
+  "tracking": [],
+  "status": "RuntimeError: Failed to write 'Torque_Enable' on id_=3 with '1' after 1 tries. ",
+  "before": {
+    "shoulder_pan": 6.813186813186813,
+    "shoulder_lift": -98.1978021978022,
+    "elbow_flex": 96.17582417582418,
+    "wrist_flex": 10.76923076923077,
+    "wrist_roll": -4.527472527472527,
+    "gripper": 34.643377001455605
+  },
+  "target_position_m": [
+    0.2432538539549305,
+    -0.02380543045129416,
+    0.1562325424568306
+  ],
+  "ik": {
+    "joint_angles": {
+      "shoulder_pan": 0.11892101422216389,
+      "shoulder_lift": -1.7213548302992026,
+      "elbow_flex": 1.525704684846535,
+      "wrist_flex": 0.1620839281713738,
+      "wrist_roll": -0.07919797953229502
+    },
+    "success": true,
+    "error_m": 0.00018064378566133774,
+    "error_history_m": [
+      0.04999999999999999,
+      0.029351085543121287,
+      0.004593537840404188,
+      0.00018064378566133774
+    ],
+    "iterations": 3
+  }
+}

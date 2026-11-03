@@ -1,0 +1,35 @@
+{
+  "start_pose_file": "experiments/results/ik_start_pose.json",
+  "start_joint_angles_rad": {
+    "shoulder_pan": 0.13118738553451884,
+    "shoulder_lift": 0.05983986006837701,
+    "elbow_flex": -0.06751163700022023,
+    "wrist_flex": 0.1634088486482603,
+    "wrist_roll": -0.08055365778435367
+  },
+  "target_position_m": [
+    0.39187601430192287,
+    -0.04595046867591379,
+    0.2110650385340314
+  ],
+  "solved_position_m": [
+    0.3917023586337318,
+    -0.045927571556924555,
+    0.2110740575272688
+  ],
+  "joint_angles": {
+    "shoulder_pan": 0.13118853378013692,
+    "shoulder_lift": 0.05007116633565478,
+    "elbow_flex": -0.08503519640552369,
+    "wrist_flex": 0.15241719158333078,
+    "wrist_roll": -0.08060711103610012
+  },
+  "success": true,
+  "error_m": 0.00017539073918512398,
+  "error_history_m": [
+    0.010000000000000009,
+    0.00017539073918512398
+  ],
+  "iterations": 1,
+  "note": "Software IK result only; no collision checking or hardware execution."
+}

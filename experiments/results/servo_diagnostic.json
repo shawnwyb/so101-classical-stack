@@ -1,0 +1,176 @@
+{
+  "timestamp_utc": "2026-11-03T00:59:07.303482+00:00",
+  "motors": {
+    "shoulder_lift": {
+      "Torque_Enable": {
+        "raw_value": 0,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Present_Voltage": {
+        "raw_value": 123,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Present_Temperature": {
+        "raw_value": 47,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Status": {
+        "raw_value": 0,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Present_Current": {
+        "raw_value": 69,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Present_Load": {
+        "raw_value": 0,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "P_Coefficient": {
+        "raw_value": 16,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "D_Coefficient": {
+        "raw_value": 32,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "I_Coefficient": {
+        "raw_value": 0,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "CW_Dead_Zone": {
+        "raw_value": 1,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "CCW_Dead_Zone": {
+        "raw_value": 1,
+        "communication_result": 0,
+        "packet_error": 0
+      }
+    },
+    "elbow_flex": {
+      "Torque_Enable": {
+        "raw_value": 0,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Present_Voltage": {
+        "raw_value": 124,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Present_Temperature": {
+        "raw_value": 47,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Status": {
+        "raw_value": 0,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Present_Current": {
+        "raw_value": 45,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Present_Load": {
+        "raw_value": 0,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "P_Coefficient": {
+        "raw_value": 16,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "D_Coefficient": {
+        "raw_value": 32,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "I_Coefficient": {
+        "raw_value": 0,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "CW_Dead_Zone": {
+        "raw_value": 1,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "CCW_Dead_Zone": {
+        "raw_value": 1,
+        "communication_result": 0,
+        "packet_error": 0
+      }
+    },
+    "wrist_flex": {
+      "Torque_Enable": {
+        "raw_value": 0,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Present_Voltage": {
+        "raw_value": 123,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Present_Temperature": {
+        "raw_value": 48,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Status": {
+        "raw_value": 0,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Present_Current": {
+        "raw_value": 27,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "Present_Load": {
+        "raw_value": 0,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "P_Coefficient": {
+        "raw_value": 16,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "D_Coefficient": {
+        "raw_value": 32,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "I_Coefficient": {
+        "raw_value": 0,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "CW_Dead_Zone": {
+        "raw_value": 1,
+        "communication_result": 0,
+        "packet_error": 0
+      },
+      "CCW_Dead_Zone": {
+        "raw_value": 1,
+        "communication_result": 0,
+        "packet_error": 0
+      }
+    }
+  }
+}
