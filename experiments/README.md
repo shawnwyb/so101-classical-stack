@@ -56,8 +56,8 @@ viewer and finishes the files. Previewing alone saves nothing; no arm commands
 are sent.
 
 Settings are saved in [`camera_settings.json`](camera_settings.json) and reapplied
-and verified at startup. Both cameras use **automatic exposure** and automatic
-white balance.
+and verified at startup. Closeup uses **automatic exposure**; wide uses **90 ms
+manual exposure** (`exposure_absolute=900`). White balance is automatic on both.
 Longer exposure brightens the image but can blur motion and reduce FPS.
 
 **What the camera tests showed**
@@ -78,7 +78,8 @@ about 23 ms to 4 ms per refresh.
 
 Shorter wide exposure, different resolutions, and MJPEG versus YUYV did not lift
 wide above about 20 fps when tested alone. The remaining camera/firmware versus
-USB/driver limit is unresolved. Read the live FPS below each preview; it measures
+USB/driver limit is unresolved. These results do not establish the frame rate at
+the current 90 ms manual setting. Read the live FPS below each preview; it measures
 recent capture, rather than the requested rate.
 
 **Recording and reproducing the setup**

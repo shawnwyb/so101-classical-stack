@@ -1,7 +1,7 @@
 {
   "version": 1,
   "capture": {"width": 640, "height": 480, "fps": 30},
-  "setup_notes": "Roles describe the current close and wide views. Keep mounts and diffuse room lighting consistent. One camera has no unique USB serial; verify device-to-view mapping on another PC. Exposure and white balance are automatic on both cameras.",
+  "setup_notes": "Roles describe the current close and wide views. Keep mounts and diffuse room lighting consistent. One camera has no unique USB serial; verify device-to-view mapping on another PC. Closeup exposure is automatic; wide exposure is manual at 90 ms. White balance is automatic on both cameras.",
   "cameras": {
     "closeup": {
       "device": "/dev/v4l/by-id/usb-icSpring_icspring_camera-video-index0",
@@ -21,7 +21,8 @@
     "wide": {
       "device": "/dev/v4l/by-id/usb-icSpring_icspring_camera_202404160005-video-index0",
       "controls": {
-        "exposure_auto": 3,
+        "exposure_auto": 1,
+        "exposure_absolute": 900,
         "auto_white_balance": 1,
         "brightness": 0,
         "contrast": 32,
