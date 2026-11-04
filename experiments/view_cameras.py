@@ -1,6 +1,7 @@
 """Desktop camera previews with optional per-camera AVI recording; no arm control."""
 
 import argparse
+from collections import deque
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -65,6 +66,7 @@ class Camera:
             for name, value in requested.items():
                 if controls[name]['value'] != value:
                     raise RuntimeError(f'{name} changed since startup; restart to reapply configuration')
+        fourcc = int(capture.get(cv2.CAP_PROP_FOURCC))
         return {
             'camera': self.name, 'source': self.source,
             'resolved_source': str(Path(self.source).resolve()) if isinstance(self.source, str) else None,
@@ -75,7 +77,9 @@ class Camera:
             'requested_capture': {'width': self.args.width, 'height': self.args.height, 'fps': self.args.fps},
             'actual_capture': {'width': capture.get(cv2.CAP_PROP_FRAME_WIDTH),
                                'height': capture.get(cv2.CAP_PROP_FRAME_HEIGHT),
-                               'fps': capture.get(cv2.CAP_PROP_FPS)},
+                               'fps': capture.get(cv2.CAP_PROP_FPS),
+                               'buffer_count': capture.get(cv2.CAP_PROP_BUFFERSIZE),
+                               'pixel_format': ''.join(chr((fourcc >> (8 * i)) & 255) for i in range(4))},
             'actual_controls': controls,
             'opencv_version': cv2.__version__,
         }
@@ -102,8 +106,8 @@ class Camera:
                 metadata_path.write_text(json.dumps(recording_metadata, indent=2) + '\n')
 
         active_directory = None
-        frame_count = 0
-        started = time.monotonic()
+        frame_times = deque()
+        file_source = isinstance(self.source, str) and Path(self.source).is_file()
         try:
             if not capture.isOpened():
                 raise RuntimeError(f'Cannot open {self.source}; check connection/access')
@@ -111,7 +115,8 @@ class Camera:
             capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.args.width)
             capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.args.height)
             capture.set(cv2.CAP_PROP_FPS, self.args.fps)
-            capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            # A single queued UVC buffer dropped alternate frames on this camera.
+            capture.set(cv2.CAP_PROP_BUFFERSIZE, 4)
             if self.profile is not None:
                 apply_controls(self.source, self.profile['controls'])
             self.settings = self.read_settings(capture)
@@ -157,8 +162,12 @@ class Camera:
                 if writer is not None:
                     writer.write(frame)
                     recording_frames += 1
-                frame_count += 1
-                measured_fps = frame_count / max(time.monotonic() - started, 0.001)
+                now = time.monotonic()
+                frame_times.append(now)
+                while len(frame_times) > 2 and frame_times[0] < now - 2:
+                    frame_times.popleft()
+                measured_fps = ((len(frame_times) - 1) / (frame_times[-1] - frame_times[0])
+                                if len(frame_times) > 1 else 0.0)
                 state = 'REC' if writer is not None else 'Live'
                 if self.profile is not None:
                     exposure = self.profile['controls'].get('exposure_absolute')
@@ -166,12 +175,13 @@ class Camera:
                 with self.lock:
                     self.frame = frame
                     self.status = f'{state} | {frame.shape[1]}×{frame.shape[0]} | {measured_fps:.1f} fps'
-                # Also allows video files as sources for checking the viewer.
-                next_frame += 1 / fps
-                now = time.monotonic()
-                if next_frame < now:
-                    next_frame = now
-                self.stopping.wait(max(0, next_frame - now))
+                # Live reads are paced by the device. Only files need playback pacing.
+                if file_source:
+                    next_frame += 1 / fps
+                    now = time.monotonic()
+                    if next_frame < now:
+                        next_frame = now
+                    self.stopping.wait(max(0, next_frame - now))
         except Exception as error:
             with self.lock:
                 self.status = f'Error: {error}'
@@ -186,12 +196,20 @@ class Camera:
 
 class Viewer:
     def __init__(self, root, cameras, args):
+        # A large OpenCV thread pool adds overhead for small webcam images.
+        # Configure before capture workers start; this affects only this process.
+        cv2.setNumThreads(1)
         self.root = root
         self.cameras = cameras
         self.args = args
         self.recording = False
         self.closing = False
         self.images = {}
+        self.rendered_frames = {}
+        self.messages = {}
+        self.startup_index = 0
+        self.starting_camera = None
+        self.startup_deadline = 0
         root.title('SO-101 cameras')
         root.geometry('1200x700')
         root.protocol('WM_DELETE_WINDOW', self.close)
@@ -218,8 +236,25 @@ class Viewer:
             preview = tk.Label(panel, bg='#171717')
             preview.pack(fill='both', expand=True)
             self.panels.append((preview, status))
-            camera.thread.start()
+        self.start_next_camera()
         self.refresh()
+
+    def start_next_camera(self):
+        """Let each stream start before opening the next device on a shared hub."""
+        if self.closing:
+            return
+        camera = self.starting_camera
+        if (camera is not None and camera.thread.is_alive() and camera.snapshot()[0] is None
+                and time.monotonic() < self.startup_deadline):
+            self.root.after(20, self.start_next_camera)
+            return
+        if self.startup_index < len(self.cameras):
+            camera = self.cameras[self.startup_index]
+            self.startup_index += 1
+            self.starting_camera = camera
+            self.startup_deadline = time.monotonic() + 5
+            camera.thread.start()
+            self.root.after(20, self.start_next_camera)
 
     def toggle_recording(self):
         if self.closing:
@@ -248,18 +283,30 @@ class Viewer:
     def refresh(self):
         if self.closing:
             return
+        started = time.monotonic()
         for index, (camera, (preview, status)) in enumerate(zip(self.cameras, self.panels)):
             frame, message = camera.snapshot()
-            status.configure(text=message)
+            if message != self.messages.get(index):
+                status.configure(text=message)
+                self.messages[index] = message
             if frame is None:
-                preview.configure(image='')
-                self.images.pop(index, None)
+                if index in self.images:
+                    preview.configure(image='')
+                    self.images.pop(index, None)
+                    self.rendered_frames.pop(index, None)
+                continue
+            bounds = (max(1, preview.winfo_width()), max(1, preview.winfo_height()))
+            previous = self.rendered_frames.get(index)
+            if previous is not None and frame is previous[0] and bounds == previous[1]:
                 continue
             image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            image.thumbnail((max(1, preview.winfo_width()), max(1, preview.winfo_height())))
+            image.thumbnail(bounds, Image.Resampling.BILINEAR)
             self.images[index] = ImageTk.PhotoImage(image)
             preview.configure(image=self.images[index])
-        self.root.after(33, self.refresh)
+            self.rendered_frames[index] = (frame, bounds)
+        # Include rendering time in the polling interval, rather than adding it.
+        delay_ms = max(1, 16 - int((time.monotonic() - started) * 1000))
+        self.root.after(delay_ms, self.refresh)
 
     def close(self):
         if self.closing:

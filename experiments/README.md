@@ -46,65 +46,62 @@ python -m experiments.simulate_gravity_compensation
 
 **Camera viewer**
 
-`view_cameras` opens a desktop window using the saved Linux camera profiles in
-[`camera_settings.json`](camera_settings.json). It applies and verifies the image
-controls every time it opens a camera. Use **Record
-all** / **Stop recording** (or **R**) to toggle recording; **Esc** or closing the
-window finishes the files and exits. Previewing alone saves nothing. Camera errors
-appear below each preview.
-
 ```bash
+python -m experiments.view_cameras
 python -m experiments.view_cameras --list
-python -m experiments.view_cameras --config experiments/camera_settings.json
-# Inspect other cameras without applying profiles (does not reset existing controls).
-python -m experiments.view_cameras --no-config --camera overhead=/dev/video0 --camera wrist=/dev/video2
 ```
 
-Profiles use roles (`closeup`, `wide`) and `/dev/v4l/by-id/...-video-index0` device
-paths instead of changing `/dev/videoN` numbers. On another Linux PC, run `--list`,
-check which view belongs to each camera, and update the profile device paths if
-needed. The wide camera has serial `202404160005`; the close-up camera does not
-expose a unique serial, so check its mapping if more identical cameras are added.
-`--camera ROLE=PATH` can override a configured role's path. With `--no-config`,
-discovery prefers by-id paths and otherwise tries `/dev/video*`; select working
-devices explicitly if metadata nodes fail. The viewer requests
-640×480 at 30 fps; use `--width`, `--height`, and `--fps` to change these settings.
-The viewer reports an error if negotiated settings differ from the request.
+Click **Record all** or press **R** to start/stop recording. **Esc** closes the
+viewer and finishes the files. Previewing alone saves nothing; no arm commands
+are sent.
 
-Both cameras use **automatic exposure** (`exposure_auto=3`), with no fixed exposure
-time applied. White balance is also automatic on both. Check moving gripper visibility,
-brightness changes, and motion blur before collecting training data. Neither camera exposes
-a standard gain control. Other image controls are explicitly saved per camera.
+Settings are saved in [`camera_settings.json`](camera_settings.json) and reapplied
+and verified at startup. Both cameras use **automatic exposure** and automatic
+white balance.
+Longer exposure brightens the image but can blur motion and reduce FPS.
 
-Missing devices and unsupported/rejected controls appear as errors rather than
-silently accepting another setup. Capture FPS readback is nominal: observed frame
-rate can be lower, and is shown in the preview and logged on recording completion.
-Configured controls are read back again when recording starts. Keep other
-camera-control applications closed during a run. `--no-config` skips application
-of settings; it does not undo previous settings. To use manual exposure in a
-profile, set `exposure_auto` to `1` and add `exposure_absolute` in units of 100
-microseconds, then restart the viewer. An inactive manual exposure value does
-not reveal the actual exposure while automatic mode is enabled.
+**What the camera tests showed**
 
-For repeatable ML experiments, also document mount positions and angles (with setup
-photos and measurements), light placement/type, background, and any changes between
-sessions. These physical measurements have not been recorded for this setup yet.
-Reuse the camera configuration in training-data collection and policy deployment;
-this viewer does not configure a separate LeRobot process automatically. Different
-camera models may need different control values and may not support this profile.
+The cameras advertise 30 fps, but actual capture was slower. These measurements
+used the current lighting and **automatic exposure**, except where noted:
 
-Each recording gets a UTC timestamp directory under `experiments/camera_recordings/`
-(ignored by Git), with one MJPEG `.avi` and one `.settings.json` per camera. Each
-settings file records the role/device, configured controls, actual control readback
-and supported ranges, requested/negotiated capture format, OpenCV version, and frame
-count/observed FPS after a clean stop. Use `--output-dir PATH` to save
-elsewhere. Files contain camera frames without preview overlays or audio. Streams
-are independent, with no hardware synchronization; AVI uses the negotiated nominal
-frame rate, so slow capture or dropped frames can affect playback timing.
+| Test | Measured FPS |
+| --- | --- |
+| Wide alone, four capture buffers | About 20 |
+| Both on the USB hub, after viewer fixes | Closeup about 6; wide about 15 |
+| Closeup with a temporary 10 ms manual exposure | About 23, with a darker image |
 
-The viewer uses OpenCV, Pillow, and Tk; it works with headless OpenCV because Tk
-displays the previews. These are available in the current `lerobot` environment.
-If needed, install `opencv-python-headless` and `pillow` with pip and `tk` with Conda.
+A single capture buffer dropped frames. Using four buffers and starting closeup
+before wide improved delivery; sequential startup raised wide from about 10 to
+15 fps with both connected. Reducing processing overhead cut preview work from
+about 23 ms to 4 ms per refresh.
+
+Shorter wide exposure, different resolutions, and MJPEG versus YUYV did not lift
+wide above about 20 fps when tested alone. The remaining camera/firmware versus
+USB/driver limit is unresolved. Read the live FPS below each preview; it measures
+recent capture, rather than the requested rate.
+
+**Recording and reproducing the setup**
+
+Recordings go to `experiments/camera_recordings/<UTC timestamp>/` (ignored by Git),
+with a separate `.avi` and `.settings.json` for each camera. Settings files include
+requested/read-back controls, capture format, and frame count/measured FPS after
+stopping. Streams have no audio or hardware synchronization. AVI uses nominal FPS,
+so slow capture can make playback faster than real time.
+
+On another Linux PC, run `--list` and check the profile device paths and views.
+Wide has serial `202404160005`; closeup has no unique serial. Keep camera mounts
+and lighting consistent, and apply the same settings in any separate LeRobot
+recording/deployment process. The viewer does not configure those processes.
+
+Use `--config PATH` for another profile, `--output-dir PATH` for another recording
+folder, and `--width`, `--height`, or `--fps` to override capture requests. For
+unconfigured cameras, use `--no-config --camera NAME=/dev/videoN`; this skips saved
+controls but does not reset existing device settings. Missing devices and rejected
+settings are reported as errors.
+
+Dependencies: OpenCV, Pillow, and Tk (available in the `lerobot` environment).
+Headless OpenCV works because Tk displays the images.
 
 **Key findings**
 
