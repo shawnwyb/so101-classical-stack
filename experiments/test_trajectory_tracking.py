@@ -36,7 +36,7 @@ def make_trajectory(start, end, duration, period, velocity_limit, acceleration_l
     return trajectory
 
 
-def execute(bus, trajectory, record, *, settle_time=2.0, verbose=True):
+def execute(bus, trajectory, record, *, settle_time=2.0, verbose=True, sample_hook=None):
     """Schedule against a monotonic clock; skip missed samples instead of bursting."""
     if not np.isfinite(settle_time) or settle_time < 0:
         raise ValueError('Settling time must be nonnegative and finite')
@@ -52,6 +52,8 @@ def execute(bus, trajectory, record, *, settle_time=2.0, verbose=True):
         index = max(index, int(np.searchsorted(reference_times, command_time, side='right')) - 1)
         index = min(index, len(reference_times) - 1)
         command = positions[index]
+        if sample_hook is not None:
+            sample_hook()
         bus.sync_write('Goal_Position', dict(zip(NAMES, command)))
         actual = np.rad2deg(angles(bus.sync_read('Present_Position')))
         sample = {

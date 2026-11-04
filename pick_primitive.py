@@ -1,7 +1,6 @@
 """Pick, lift, and return using a taught grasp and smooth joint trajectories."""
 
 import json
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -10,6 +9,7 @@ from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
 
 from experiments import RESULTS_DIR
 from experiments.test_trajectory_tracking import execute, make_trajectory
+from gripper_control import GripperController, release_gripper
 from so101_kinematics import (
     JOINT_CHAIN, calibrated_joint_limits, forward_kinematics, inverse_kinematics,
 )
@@ -24,8 +24,9 @@ APPROACH_HEIGHT = 0.03  # metres above the taught grasp
 LIFT_HEIGHT = 0.10      # metres above the taught grasp
 DURATION = 1.0         # minimum seconds per arm segment
 OPEN_PERCENT = 70
-CLOSE_PERCENT = 38.2
+CLOSE_PERCENT = 35
 GRIPPER_EFFORT = 200   # 20% effort ceiling
+GRIPPER_HOLD_EFFORT = 100  # Lower ceiling after contact; verify retention on your object.
 GRASP_FILE = Path(__file__).with_name("grasp_pose.json")
 
 
@@ -71,29 +72,15 @@ def plan_waypoints(grasp_file, duration):
     return grasp, approach, lift
 
 
-def move_to(bus, target_angles, label, duration, trial):
+def move_to(bus, target_angles, label, duration, trial, gripper=None):
     """Move from measured angles, recording tracking even if execution fails."""
     motion = build_trajectory(read_joint_angles(bus), target_angles, duration)
     record = {"label": label, "duration_s": float(motion["time_s"][-1]), "samples": []}
     trial["phases"].append(record)
     print(f"Moving: {label} ({record['duration_s']:.1f} s)")
-    execute(bus, motion, record, settle_time=0, verbose=False)
+    execute(bus, motion, record, settle_time=0, verbose=False,
+            sample_hook=(lambda: gripper.monitor(record)) if gripper else None)
     record["actual_tool_position_m"] = forward_kinematics(read_joint_angles(bus)).T[:3, 3].tolist()
-
-
-def set_gripper(bus, percent, label, trial):
-    """Set normalized gripper travel; this is not a force command."""
-    before = bus.read("Present_Position", "gripper")
-    bus.write("Goal_Position", "gripper", percent)
-    time.sleep(0.5)  # Allow the finger to move before lifting or retreating.
-    trial["gripper"].append({
-        "phase": label,
-        "before_percent": before,
-        "command_percent": percent,
-        "actual_percent": bus.read("Present_Position", "gripper"),
-        "load_raw": bus.read("Present_Load", "gripper", normalize=False),
-    })
-    print(f"Gripper {label}: {before:.1f}% -> {trial['gripper'][-1]['actual_percent']:.1f}% (target {percent:.1f}%)")
 
 
 def prepare_motors(bus, approach, session, log):
@@ -122,6 +109,9 @@ def prepare_motors(bus, approach, session, log):
     bus.write("Torque_Limit", "gripper", effort)
     if bus.read("P_Coefficient", "elbow_flex") != ELBOW_P:
         raise RuntimeError("Elbow P readback mismatch")
+    if bus.read("Torque_Limit", "gripper") != effort:
+        raise RuntimeError("Gripper effort readback mismatch")
+    session["gripper_effort"] = effort
 
     bus.sync_write("Goal_Position", {name: current[name] for name in ALL_MOTORS})
     session["motors_enabled"] = True  # Cleanup also handles partial enable failure.
@@ -129,15 +119,15 @@ def prepare_motors(bus, approach, session, log):
     return startup_angles
 
 
-def run_trial(bus, grasp, approach, lift, startup_angles, trial):
+def run_trial(bus, grasp, approach, lift, startup_angles, trial, gripper):
     """Open, pick, lift 10 cm, lower, release, and return without a top hold."""
-    set_gripper(bus, OPEN_PERCENT, "open", trial)
+    gripper.move(OPEN_PERCENT, "open", trial)
     move_to(bus, approach, "approach", DURATION, trial)
     move_to(bus, grasp, "descend", DURATION, trial)
-    set_gripper(bus, CLOSE_PERCENT, "close", trial)
-    move_to(bus, lift, "lift", DURATION, trial)
-    move_to(bus, grasp, "lower", DURATION, trial)
-    set_gripper(bus, OPEN_PERCENT, "release_object", trial)
+    gripper.move(CLOSE_PERCENT, "close", trial, closing=True)
+    move_to(bus, lift, "lift", DURATION, trial, gripper)
+    move_to(bus, grasp, "lower", DURATION, trial, gripper)
+    gripper.move(OPEN_PERCENT, "release_object", trial)
     move_to(bus, approach, "retreat", DURATION, trial)
     move_to(bus, startup_angles, "return_start", DURATION, trial)
 
@@ -154,6 +144,8 @@ def cleanup_motors(bus, session, log):
     """Release each motor, restore settings, and close the USB connection."""
     if not bus.is_connected:
         return
+    gripper_released = not session["motors_enabled"]
+    gripper_fault = False
     if session["motors_enabled"]:
         try:
             input("Support object and full arm weight. Enter to release all motors: ")
@@ -161,7 +153,16 @@ def cleanup_motors(bus, session, log):
             log["cleanup_note"] = "Release prompt interrupted; cleanup still attempted"
         for name in ALL_MOTORS:
             try:
-                bus.disable_torque(name)
+                if name == "gripper":
+                    shutdown = release_gripper(bus)
+                    log["gripper_shutdown"] = shutdown
+                    gripper_released = shutdown['confirmed']
+                    gripper_fault = bool(shutdown['fault_flags'])
+                    if gripper_fault:
+                        print('Gripper torque-off confirmed, but its fault remains active; '
+                              'inspect/recover the gripper before another run.')
+                else:
+                    bus.disable_torque(name)
             except Exception as error:
                 log.setdefault("cleanup_errors", []).append(f"{name}: {error}")
                 print(f"Could not confirm release of {name}: {error}")
@@ -172,8 +173,13 @@ def cleanup_motors(bus, session, log):
             ("Lock", "elbow_flex", 0),
             ("P_Coefficient", "elbow_flex", original["elbow_p"]),
             ("Lock", "elbow_flex", original["elbow_lock"]),
-            ("Torque_Limit", "gripper", original["gripper_limit"]),
         ]
+        if gripper_released and not gripper_fault:
+            settings_to_restore.append(("Torque_Limit", "gripper", original["gripper_limit"]))
+        else:
+            log["gripper_limit_restore_skipped"] = (
+                "Gripper fault active or torque-off unconfirmed; effort limit not increased"
+            )
         for register, motor, value in settings_to_restore:
             try:
                 bus.write(register, motor, value)
@@ -213,6 +219,7 @@ def main():
             "open_percent": OPEN_PERCENT,
             "close_percent": CLOSE_PERCENT,
             "gripper_effort": GRIPPER_EFFORT,
+            "gripper_hold_effort": GRIPPER_HOLD_EFFORT,
             "grasp": str(GRASP_FILE),
         },
         "grasp_angles_rad": grasp,
@@ -231,7 +238,8 @@ def main():
         input("Place object at its mark; hands clear. Enter to start the full cycle: ")
         trial = {"number": 1, "phases": [], "gripper": [], "success": None}
         log["trials"].append(trial)
-        run_trial(robot.bus, grasp, approach, lift, startup_angles, trial)
+        gripper = GripperController(robot.bus, session["gripper_effort"], GRIPPER_HOLD_EFFORT)
+        run_trial(robot.bus, grasp, approach, lift, startup_angles, trial, gripper)
         log["status"] = "completed"
     except BaseException as error:
         log["status"] = f"{type(error).__name__}: {error}"

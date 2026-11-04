@@ -137,9 +137,24 @@ useful trends rather than precise controlled benchmarks.
 - Pick settings: minimum 1 s per segment, 60°/s maximum speed, 60°/s² maximum
   acceleration, and 50 Hz commands. Segments take longer when limits require it;
   each ends at zero planned velocity with no extra settling wait.
-- Gripper positions: 70% open, 38.2% closed, with a 0.5 s movement wait.
-  Pick temporarily sets elbow P=32 and gripper effort to at most 200/1000,
-  then restores previous settings. Edit constants in `pick_primitive.py` for tuning.
+- Gripper positions: 70% open and a 35% closing travel bound. Opening waits for
+  position feedback (within 1 percentage point, up to 3 s); a blocked opening
+  aborts before approach. Closing polls position/load at 20 Hz, detects stalled
+  contact, and replaces the closing bound with the measured contact position minus
+  0.5 percentage point. For example, contact at 57.4% changes the goal to 56.9%,
+  rather than continuing to drive toward 35% throughout the lift.
+- Pick temporarily sets elbow P=32 and gripper movement effort to at most 200/1000.
+  After closing, holding effort is limited to at most 100/1000. These are heuristic
+  settings, not measured grip force; retention at the lower effort needs physical
+  verification for each object. Closing times out after 1.5 s if it has neither
+  reached its target nor detected loaded contact. No-load stalls abort.
+- During lift/lower, gripper position and load are checked at approximately 20 Hz.
+  Sustained near-limit holding load or position error stops the trajectory; servo
+  errors abort rather than automatically clearing the alarm and resuming. Normal
+  cleanup restores previous settings. If a gripper alarm remains, cleanup attempts
+  torque-off and confirms it using raw register readback while preserving alarm
+  flags. It does not increase the effort limit when faulted or release is unconfirmed.
+  Edit constants in `pick_primitive.py` and `gripper_control.py` for tuning.
 - Kinematics and trajectory math use radians, metres, and seconds.
 - IK and trajectory checks require the local `so101_follower` calibration file
   and use its full recorded ranges. MuJoCo retains the URDF model limits.
@@ -175,6 +190,10 @@ compensation runs use timestamped filenames.
   release. Actual lift height depends on tracking. Gripper positions and effort
   settings are not measured grip force; adjust them for the object. A previous
   tighter close command caused overload on reopening; firmware protection remains enabled.
+  Contact detection cannot distinguish the intended object from a mechanical jam.
+  The contact/holding changes have software regression tests, but physical grip
+  retention and overload avoidance still require validation. Recover an existing
+  servo fault before retrying; this script does not clear it through a new motion command.
 - MuJoCo uses ideal torque control and model mass properties; it does not reproduce
   the Feetech controller, friction, or gear play. `Present_Load` is not directly
   torque in N·m. The compensated run starts at its target with exact model knowledge.
