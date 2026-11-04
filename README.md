@@ -46,6 +46,12 @@ adjust the opening and closing positions for your object.
 
 ## Scope and limitations
 
+For desktop camera previews with optional recording, run
+`python -m experiments.view_cameras`. Click **Record all** or press **R** to
+start/stop recording. The viewer reapplies saved Linux camera profiles from
+`experiments/camera_settings.json` and logs settings with each recording.
+See [camera viewer options](experiments/README.md).
+
 Picks require a taught grasp and fixed object placement. IK controls position only;
 gripper orientation may change. Motion has no collision checking. Gravity
 compensation is explored in simulation only. Measurements and trial logs are
