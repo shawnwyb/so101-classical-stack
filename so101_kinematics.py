@@ -1,6 +1,7 @@
 """SO-101 forward kinematics, using metres and radians."""
 
 from pathlib import Path
+import json
 import xml.etree.ElementTree as ET
 
 import numpy as np
@@ -17,6 +18,26 @@ JOINT_CHAIN = (
     "wrist_roll",
     "gripper_frame_joint",
 )
+CALIBRATION_PATH = (
+    Path.home() / ".cache/huggingface/lerobot/calibration/robots/so_follower/so101_follower.json"
+)
+
+
+def calibrated_joint_limits():
+    """Return five lower/upper bounds in radians, matching LeRobot degree mode.
+
+    STS3215 degree conversion uses 4095 counts per turn and the recorded
+    range midpoint as zero. These limits do not check collisions or speed.
+    """
+    calibration = json.loads(CALIBRATION_PATH.read_text())
+    half_ranges = np.array([
+        (calibration[name]["range_max"] - calibration[name]["range_min"]) * 180 / 4095
+        for name in JOINT_CHAIN[:-1]
+    ])
+    if not np.all(np.isfinite(half_ranges)) or np.any(half_ranges <= 0):
+        raise ValueError("Calibration ranges must be positive and finite")
+    upper = np.deg2rad(half_ranges)
+    return -upper, upper
 
 
 def axis_rotation(axis, angle):
@@ -108,7 +129,7 @@ def inverse_kinematics(
     target_position, initial_angles, *, tolerance=0.001, damping=0.01,
     max_step=np.deg2rad(5), max_iterations=100,
 ):
-    """Solve position-only IK with damped least squares and URDF joint limits.
+    """Solve position-only IK with damped least squares and calibrated limits.
 
     Positions/tolerance are in metres; angles/max_step are in radians.
     Returns angles, success, and error history. Orientation is unconstrained.
@@ -123,12 +144,10 @@ def inverse_kinematics(
         raise ValueError("max_iterations must be a nonnegative integer")
 
     names = JOINT_CHAIN[:-1]
-    joints = {j.attrib["name"]: j for j in ET.parse(URDF_PATH).getroot().findall("joint")}
-    lower = np.array([float(joints[n].find("limit").attrib["lower"]) for n in names])
-    upper = np.array([float(joints[n].find("limit").attrib["upper"]) for n in names])
+    lower, upper = calibrated_joint_limits()
     q = np.array([initial_angles[n] for n in names], dtype=float)
     if not np.all(np.isfinite(q)) or np.any(q < lower) or np.any(q > upper):
-        raise ValueError("Initial angles must be finite and within URDF limits")
+        raise ValueError("Initial angles must be finite and inside calibrated limits")
 
     errors = []
     for iteration in range(max_iterations + 1):

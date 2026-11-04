@@ -4,14 +4,13 @@ import argparse
 import csv
 import json
 import time
-import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
 import numpy as np
 from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
 
 from experiments import RESULTS_DIR
-from so101_kinematics import JOINT_CHAIN, URDF_PATH
+from so101_kinematics import JOINT_CHAIN, calibrated_joint_limits
 from trajectories import quintic_trajectory
 
 
@@ -24,12 +23,11 @@ def angles(readings):
 
 def make_trajectory(start, end, duration, period, velocity_limit, acceleration_limit):
     trajectory = quintic_trajectory(start, end, duration, period)
-    joints = {j.attrib['name']: j for j in ET.parse(URDF_PATH).getroot().findall('joint')}
+    lower, upper = calibrated_joint_limits()
     for column, name in enumerate(NAMES):
-        limit = joints[name].find('limit').attrib
         positions = trajectory['position_rad'][:, column]
-        if positions.min() < float(limit['lower']) or positions.max() > float(limit['upper']):
-            raise ValueError(f'{name}: trajectory exceeds URDF joint limits')
+        if positions.min() < lower[column] or positions.max() > upper[column]:
+            raise ValueError(f'{name}: trajectory exceeds calibrated limits')
     # Exact continuous maxima of this particular zero-endpoint quintic.
     peak_speed = np.rad2deg(1.875 * np.abs(end - start) / duration)
     peak_acceleration = np.rad2deg((10 / np.sqrt(3)) * np.abs(end - start) / duration**2)
@@ -38,8 +36,10 @@ def make_trajectory(start, end, duration, period, velocity_limit, acceleration_l
     return trajectory
 
 
-def execute(bus, trajectory, record):
+def execute(bus, trajectory, record, *, settle_time=2.0, verbose=True):
     """Schedule against a monotonic clock; skip missed samples instead of bursting."""
+    if not np.isfinite(settle_time) or settle_time < 0:
+        raise ValueError('Settling time must be nonnegative and finite')
     reference_times = trajectory['time_s']
     positions = np.rad2deg(trajectory['position_rad'])
     start_time = time.monotonic()
@@ -73,13 +73,17 @@ def execute(bus, trajectory, record):
     record['rms_error_deg'] = dict(zip(NAMES, np.sqrt(np.mean(errors**2, axis=0)).tolist()))
     record['peak_error_deg'] = dict(zip(NAMES, np.max(np.abs(errors), axis=0).tolist()))
     record['skipped_samples'] = len(reference_times) - len(record['samples'])
-    # Separate final gravity/holding offset from errors during motion.
-    time.sleep(2)
+    # Tracking experiments wait; pick motion can continue immediately.
+    if settle_time:
+        time.sleep(settle_time)
     final = np.rad2deg(angles(bus.sync_read('Present_Position')))
-    record['settled_error_deg'] = dict(zip(NAMES, (final - positions[-1]).tolist()))
-    print(f"{record['label']} RMS errors [deg]:", {n: round(v, 3) for n, v in record['rms_error_deg'].items()})
-    print('Settled errors [deg]:', {n: round(v, 3) for n, v in record['settled_error_deg'].items()})
-    print('Skipped reference samples:', record['skipped_samples'])
+    error_key = 'settled_error_deg' if settle_time else 'end_error_deg'
+    record['settle_time_s'] = settle_time
+    record[error_key] = dict(zip(NAMES, (final - positions[-1]).tolist()))
+    if verbose:
+        print(f"{record['label']} RMS errors [deg]:", {n: round(v, 3) for n, v in record['rms_error_deg'].items()})
+        print('Final errors [deg]:', {n: round(v, 3) for n, v in record[error_key].items()})
+        print('Skipped reference samples:', record['skipped_samples'])
 
 
 def save_results(path, log):

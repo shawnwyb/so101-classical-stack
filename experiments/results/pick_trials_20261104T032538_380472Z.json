@@ -1,0 +1,44 @@
+{
+  "settings": {
+    "duration_s": 1.5,
+    "max_velocity_deg_s": 30,
+    "max_acceleration_deg_s2": 60,
+    "open_percent": 70,
+    "close_percent": 38.2,
+    "gripper_effort": 200,
+    "grasp": "/home/shawnick/Desktop/so101-classical-stack/grasp_pose.json"
+  },
+  "grasp_angles_rad": {
+    "shoulder_pan": 0.08362236855709095,
+    "shoulder_lift": 0.6996660561841005,
+    "elbow_flex": -0.32451616421696766,
+    "wrist_flex": 0.9796859141963775,
+    "wrist_roll": -0.08055365778435367
+  },
+  "approach_angles_rad": {
+    "shoulder_pan": 0.08360896562261289,
+    "shoulder_lift": 0.5634596852717829,
+    "elbow_flex": -0.3180430836596992,
+    "wrist_flex": 1.076406926423618,
+    "wrist_roll": -0.08009725395293159
+  },
+  "lift_angles_rad": {
+    "shoulder_pan": 0.08358698186752328,
+    "shoulder_lift": 0.2786995209575922,
+    "elbow_flex": -0.3527612592060585,
+    "wrist_flex": 1.2389540067970064,
+    "wrist_roll": -0.07933748127576251
+  },
+  "lift_height_m": 0.1,
+  "trials": [],
+  "status": "ValueError: shoulder_lift: trajectory exceeds URDF joint limits",
+  "original_position_rad": {
+    "shoulder_pan": 0.05600397160245541,
+    "shoulder_lift": -1.8212798436195772,
+    "elbow_flex": 1.6609397057440543,
+    "wrist_flex": 0.583822224513268,
+    "wrist_roll": -0.06981317007977318
+  },
+  "successes": 0,
+  "scored_trials": 0
+}
