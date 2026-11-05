@@ -27,7 +27,8 @@ The arm has five positioning joints plus a gripper.
 ## Run
 
 Teach your own grasp before picking: position the released arm around the object,
-then record its joint angles without commanding motion:
+close the fingers to a snug fit, then record the arm and gripper positions without
+commanding motion:
 
 ```bash
 python -m experiments.inspect_fk --save "$PWD/grasp_pose.json"
@@ -39,10 +40,10 @@ Place the object at that taught location, clear the route, then run:
 python pick_primitive.py
 ```
 
-Sequence: open → approach 3 cm above grasp → descend → close → lift 10 cm
+Sequence: open → approach 3 cm above grasp → descend → close → lift 20 cm
 → lower → release → retreat → return to startup. Follow the holding/release prompts.
-Motion and gripper settings are constants at the top of `pick_primitive.py`;
-adjust the opening and closing positions for your object.
+Motion settings and the gripper opening are constants at the top of `pick_primitive.py`;
+the closing position is loaded from `gripper_percent` in `grasp_pose.json`.
 
 ## Scope and limitations
 
