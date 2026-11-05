@@ -178,7 +178,11 @@ compensation runs use timestamped filenames.
   settings are not measured grip force; adjust them for the object. A previous
   tighter close command caused overload on reopening; firmware protection remains enabled.
   Position commands do not measure or maintain grip force. Grip retention and
-  overload avoidance remain unverified; recover an existing fault before retrying.
+  overload avoidance depend on the object and taught position. One recorded 20 cm
+  target cycle with a 36.5% closing command completed successfully without an
+  overload; see the [demo](../README.md) and
+  [trial log](results/pick_trials_20261105T013939_966830Z.json).
+  Recover an existing fault before retrying.
 - MuJoCo uses ideal torque control and model mass properties; it does not reproduce
   the Feetech controller, friction, or gear play. `Present_Load` is not directly
   torque in N·m. The compensated run starts at its target with exact model knowledge.

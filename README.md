@@ -6,6 +6,13 @@ the gripper position, inverse kinematics (IK) calculates approach and lift joint
 angles, and quintic trajectories generate smooth joint commands sent through
 LeRobot. Separate MuJoCo experiments examine gravity, inertia, and gravity compensation.
 
+A recorded pick, lift, and return with a 20 cm lift target, shown at approximately
+real-time speed. Both views show the same run.
+
+| Close-up camera | Wide camera |
+| --- | --- |
+| ![Close-up view of the pick and return](docs/media/pick-closeup.gif) | ![Wide view of the pick and return](docs/media/pick-wide.gif) |
+
 ## Setup
 
 From the repository root, with Conda installed:
